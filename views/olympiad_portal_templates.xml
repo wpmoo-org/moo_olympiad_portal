@@ -292,5 +292,285 @@
                 </div>
             </t>
         </template>
+        <!-- ============================================================ -->
+        <!-- Public Pages                                                   -->
+        <!-- ============================================================ -->
+
+        <!-- Public: Events List -->
+        <template id="public_events" name="Public Events">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <h1 class="mb-4">Olympiad Events</h1>
+                    <div t-if="not events" class="alert alert-info">
+                        No active events at the moment. Please check back later!
+                    </div>
+                    <div t-if="events" class="row g-4">
+                        <div t-foreach="events" t-as="event" class="col-md-6 col-lg-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title" t-esc="event.name"/>
+                                    <p class="card-text">
+                                        <span class="badge bg-primary" t-esc="event.state"/>
+                                    </p>
+                                    <p class="card-text">
+                                        <strong>Start:</strong> <span t-esc="event.dates"/><br/>
+                                        <strong>End:</strong> <span t-esc="event.date_end"/>
+                                    </p>
+                                    <p class="card-text" t-if="event.category_ids">
+                                        <strong>Categories:</strong> <span t-esc="', '.join(event.category_ids.mapped('name'))"/>
+                                    </p>
+                                    <a t-att-href="'/olympiad/event/' + str(event.id)" class="btn btn-outline-primary">View Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Public: Event Detail -->
+        <template id="public_event_detail" name="Public Event Detail">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <h1 t-esc="event.name"/>
+                            <div class="mb-3">
+                                <span class="badge bg-primary me-2" t-esc="event.state"/>
+                                <span class="text-muted">Registration Fee: <span t-esc="event.currency_id.symbol + ' ' + str(event.registration_fee)"/></span>
+                            </div>
+                            <hr/>
+                            <div class="row mb-4">
+                                <div class="col-sm-6">
+                                    <p><strong>Start Date:</strong> <span t-esc="event.dates"/></p>
+                                    <p><strong>End Date:</strong> <span t-esc="event.date_end"/></p>
+                                </div>
+                                <div class="col-sm-6">
+                                    <p><strong>Gold Min:</strong> <span t-esc="event.medal_gold_min"/></p>
+                                    <p><strong>Silver Min:</strong> <span t-esc="event.medal_silver_min"/></p>
+                                    <p><strong>Bronze Min:</strong> <span t-esc="event.medal_bronze_min"/></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Categories</h5>
+                                    <ul t-if="categories" class="list-group list-group-flush">
+                                        <li t-foreach="categories" t-as="cat" class="list-group-item">
+                                            <a t-att-href="'/olympiad/category/' + str(cat.id)" t-esc="cat.name"/>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Public: Categories List -->
+        <template id="public_categories" name="Public Categories">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <h1 class="mb-4">Olympiad Categories</h1>
+                    <div t-if="not categories" class="alert alert-info">
+                        No categories available at the moment.
+                    </div>
+                    <div t-if="categories" class="row g-4">
+                        <div t-foreach="categories" t-as="category" class="col-md-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title" t-esc="category.name"/>
+                                    <p class="card-text">
+                                        <span class="badge bg-info" t-esc="'Max ' + str(category.max_participants) + ' participants'"/>
+                                    </p>
+                                    <a t-att-href="'/olympiad/category/' + str(category.id)" class="btn btn-outline-primary">View Details</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Public: Category Detail -->
+        <template id="public_category_detail" name="Public Category Detail">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-lg-8 offset-lg-2">
+                            <h1 t-esc="category.name"/>
+                            <div class="card">
+                                <div class="card-body">
+                                    <p><strong>Code:</strong> <span t-esc="category.code"/></p>
+                                    <p><strong>Max Participants:</strong> <span t-esc="category.max_participants"/></p>
+                                    <hr/>
+                                    <div t-if="category.description">
+                                        <h5>Description</h5>
+                                        <div t-out="category.description"/>
+                                    </div>
+                                    <div t-if="category.criteria">
+                                        <h5 class="mt-3">Judging Criteria</h5>
+                                        <div t-out="category.criteria"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="/olympiad/categories" class="btn btn-outline-secondary mt-3">Back to All Categories</a>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- ============================================================ -->
+        <!-- Mentor/Jury Application Forms                                  -->
+        <!-- ============================================================ -->
+
+        <!-- Apply: Mentor -->
+        <template id="apply_mentor" name="Apply as Mentor">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="mb-0">Apply as Mentor</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form action="/olympiad/apply/mentor/submit" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <div class="mb-3">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" t-att-value="partner.name" disabled="disabled"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" class="form-control" t-att-value="partner.email" disabled="disabled"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Tell us about yourself</label>
+                                            <textarea name="bio" class="form-control" rows="4" placeholder="Brief bio / experience..." required="required"/>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Submit Application</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Apply: Jury -->
+        <template id="apply_jury" name="Apply as Jury">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <h3 class="mb-0">Apply as Jury Member</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form action="/olympiad/apply/jury/submit" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <div class="mb-3">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" t-att-value="partner.name" disabled="disabled"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" class="form-control" t-att-value="partner.email" disabled="disabled"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Tell us about your expertise</label>
+                                            <textarea name="expertise" class="form-control" rows="4" placeholder="Relevant experience, degrees, etc." required="required"/>
+                                        </div>
+                                        <button type="submit" class="btn btn-secondary">Submit Application</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Apply: Jury Success -->
+        <template id="apply_jury_success" name="Jury Application Success">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="alert alert-success">
+                                <h4>Application Submitted Successfully!</h4>
+                                <p>Thank you, <strong t-esc="partner.name"/>, for applying as a jury member.</p>
+                                <p>Your application is pending admin approval. You will be notified once approved.</p>
+                                <a href="/my/olympiad" class="btn btn-primary mt-3">Go to Portal</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- ============================================================ -->
+        <!-- Project Registration                                           -->
+        <!-- ============================================================ -->
+
+        <template id="register_project" name="Register Project">
+            <t t-call="website.layout">
+                <div class="container mt-4">
+                    <div class="row">
+                        <div class="col-md-8 offset-md-2">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h3 class="mb-0">Register New Project</h3>
+                                </div>
+                                <div class="card-body">
+                                    <form action="/olympiad/register/project/submit" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <div class="mb-3">
+                                            <label class="form-label">Project Name</label>
+                                            <input type="text" name="name" class="form-control" required="required" placeholder="Enter project name..."/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Select Event</label>
+                                            <select name="event_id" class="form-select" required="required">
+                                                <option value="">-- Select an event --</option>
+                                                <t t-foreach="events" t-as="event">
+                                                    <option t-att-value="event.id" t-esc="event.name"/>
+                                                </t>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Select Category</label>
+                                            <select name="category_id" class="form-select" required="required">
+                                                <option value="">-- Select a category --</option>
+                                                <t t-foreach="events" t-as="event">
+                                                    <optgroup t-att-label="event.name">
+                                                        <option t-foreach="event.category_ids" t-as="cat" t-att-value="cat.id" t-esc="cat.name"/>
+                                                    </optgroup>
+                                                </t>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Presentation Language</label>
+                                            <select name="pres_lang" class="form-select">
+                                                <option value="en">English</option>
+                                                <option value="de">German</option>
+                                            </select>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Register Project</button>
+                                        <a href="/my/olympiad/mentor" class="btn btn-outline-secondary ms-2">Cancel</a>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
     </data>
 </odoo>

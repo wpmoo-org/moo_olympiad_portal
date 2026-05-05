@@ -154,4 +154,151 @@ class OlympiadPortal(http.Controller):
             except ValueError:
                 pass
 
+    # ── Jury: Score Submission ────────────────────────────────────────────
+    @http.route('/my/olympiad/assignment/<int:assignment_id>/score', auth='user', website=True, methods=['POST'])
+    def my_olympiad_assignment_score(self, assignment_id, **post):
+        partner = self._get_olympiad_partner()
+        if not partner or not self._check_jury(partner):
+            return request.redirect('/my/olympiad')
+
+        assignment = request.env['moo_olympiad.jury.assignment'].sudo().browse(assignment_id)
+        if not assignment.exists() or assignment.jury_id.id != partner.id:
+            return request.redirect('/my/olympiad/jury')
+
+        score = post.get('score')
+        comments = post.get('comments', '')
+        if score is not None:
+            try:
+                score_val = float(score)
+                assignment.write({
+                    'score': score_val,
+                    'comments': comments,
+                })
+            except ValueError:
+                pass
+
         return request.redirect(f'/my/olympiad/assignment/{assignment_id}')
+
+    # ── Public: Events ──────────────────────────────────────────────────────
+    @http.route('/olympiad/events', auth='public', website=True)
+    def olympiad_events(self, **kw):
+        events = request.env['moo_olympiad.event'].sudo().search([
+            ('state', 'in', ['open', 'finished'])
+        ])
+        return request.render('moo_olympiad_portal.public_events', {
+            'events': events,
+        })
+
+    # ── Public: Event Detail ────────────────────────────────────────────────
+    @http.route('/olympiad/event/<int:event_id>', auth='public', website=True)
+    def olympiad_event_detail(self, event_id, **kw):
+        event = request.env['moo_olympiad.event'].sudo().browse(event_id)
+        if not event.exists() or event.state == 'cancelled':
+            return request.redirect('/olympiad/events')
+        return request.render('moo_olympiad_portal.public_event_detail', {
+            'event': event,
+            'categories': event.category_ids,
+        })
+
+    # ── Public: Categories ────────────────────────────────────────────────
+    @http.route('/olympiad/categories', auth='public', website=True)
+    def olympiad_categories(self, **kw):
+        categories = request.env['moo_olympiad.category'].sudo().search([
+            ('active', '=', True)
+        ])
+        return request.render('moo_olympiad_portal.public_categories', {
+            'categories': categories,
+        })
+
+    # ── Public: Category Detail ───────────────────────────────────────────
+    @http.route('/olympiad/category/<int:category_id>', auth='public', website=True)
+    def olympiad_category_detail(self, category_id, **kw):
+        category = request.env['moo_olympiad.category'].sudo().browse(category_id)
+        if not category.exists() or not category.active:
+            return request.redirect('/olympiad/categories')
+        return request.render('moo_olympiad_portal.public_category_detail', {
+            'category': category,
+        })
+
+    # ── Mentor/Jury Application Pages ─────────────────────────────────────
+    @http.route('/olympiad/apply/mentor', auth='user', website=True)
+    def olympiad_apply_mentor(self, **kw):
+        partner = self._get_olympiad_partner()
+        if not partner:
+            return request.redirect('/web/login')
+        # If already a mentor, redirect to mentor dashboard
+        if self._check_mentor(partner):
+            return request.redirect('/my/olympiad/mentor')
+        return request.render('moo_olympiad_portal.apply_mentor', {
+            'partner': partner,
+        })
+
+    @http.route('/olympiad/apply/jury', auth='user', website=True)
+    def olympiad_apply_jury(self, **kw):
+        partner = self._get_olympiad_partner()
+        if not partner:
+            return request.redirect('/web/login')
+        # If already approved jury, redirect to jury dashboard
+        if self._check_jury(partner):
+            return request.redirect('/my/olympiad/jury')
+        return request.render('moo_olympiad_portal.apply_jury', {
+            'partner': partner,
+        })
+
+    # ── Mentor/Jury Application Submit ─────────────────────────────────────
+    @http.route('/olympiad/apply/mentor/submit', auth='user', website=True, methods=['POST'])
+    def olympiad_apply_mentor_submit(self, **post):
+        partner = self._get_olympiad_partner()
+        if not partner:
+            return request.redirect('/web/login')
+        if self._check_mentor(partner):
+            return request.redirect('/my/olympiad/mentor')
+        partner.sudo().write({'is_olympiad_mentor': True})
+        return request.redirect('/my/olympiad')
+
+    @http.route('/olympiad/apply/jury/submit', auth='user', website=True, methods=['POST'])
+    def olympiad_apply_jury_submit(self, **post):
+        partner = self._get_olympiad_partner()
+        if not partner:
+            return request.redirect('/web/login')
+        if self._check_jury(partner):
+            return request.redirect('/my/olympiad/jury')
+        partner.sudo().write({'is_olympiad_jury': True, 'jury_state': 'pending'})
+        return request.render('moo_olympiad_portal.apply_jury_success', {
+            'partner': partner,
+        })
+
+    # ── Project Registration ───────────────────────────────────────────────
+    @http.route('/olympiad/register/project', auth='user', website=True)
+    def olympiad_register_project(self, **kw):
+        partner = self._get_olympiad_partner()
+        if not partner or not self._check_mentor(partner):
+            return request.redirect('/my/olympiad')
+
+        events = request.env['moo_olympiad.event'].sudo().search([('state', '=', 'open')])
+        return request.render('moo_olympiad_portal.register_project', {
+            'partner': partner,
+            'events': events,
+        })
+
+    @http.route('/olympiad/register/project/submit', auth='user', website=True, methods=['POST'])
+    def olympiad_register_project_submit(self, **post):
+        partner = self._get_olympiad_partner()
+        if not partner or not self._check_mentor(partner):
+            return request.redirect('/my/olympiad')
+
+        event_id = int(post.get('event_id', 0))
+        name = post.get('name', '').strip()
+        category_id = int(post.get('category_id', 0))
+
+        if not all([event_id, name, category_id]):
+            return request.redirect('/olympiad/register/project')
+
+        project = request.env['moo_olympiad.project'].sudo().create({
+            'name': name,
+            'mentor_id': partner.id,
+            'event_id': event_id,
+            'category_id': category_id,
+            'pres_lang': post.get('pres_lang', 'en'),
+        })
+        return request.redirect(f'/my/olympiad/project/{project.id}')
