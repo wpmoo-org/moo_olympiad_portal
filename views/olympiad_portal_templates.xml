@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Mentor Dashboard -->
+        <template id="mentor_dashboard" name="Mentor Dashboard">
+            <t t-call="portal.portal_layout">
+                <div class="container">
+                    <h1>Welcome, Mentor</h1>
+                    <p>You can see your projects here.</p>
+                </div>
+            </t>
+        </template>
+
+        <!-- Jury Dashboard -->
+        <template id="jury_dashboard" name="Jury Dashboard">
+            <t t-call="portal.portal_layout">
+                <div class="container">
+                    <h1>Welcome, Juror</h1>
+                    <p>You can see your assignments here.</p>
+                </div>
+            </t>
+        </template>
+    </data>
+</odoo>
