@@ -1,22 +1,294 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Mentor Dashboard -->
-        <template id="mentor_dashboard" name="Mentor Dashboard">
+        <!-- ============================================================ -->
+        <!-- Portal Home — Role detection + counters                      -->
+        <!-- ============================================================ -->
+        <template id="olympiad_home" name="Olympiad Portal Home">
             <t t-call="portal.portal_layout">
-                <div class="container">
-                    <h1>Welcome, Mentor</h1>
-                    <p>You can see your projects here.</p>
+                <div class="container mt-4">
+                    <h1 class="mb-4">Olympiad Portal</h1>
+
+                    <div class="row g-4">
+                        <!-- Mentor Card -->
+                        <div class="col-md-6" t-if="is_mentor">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fa fa-user-tie me-2"></i>Mentor Dashboard
+                                    </h5>
+                                    <p class="card-text text-muted">Manage your projects and students.</p>
+                                    <div class="d-flex justify-content-between mt-3">
+                                        <div class="text-center">
+                                            <div class="display-6 fw-bold" t-esc="mentor_project_count"/>
+                                            <small class="text-muted">Projects</small>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="display-6 fw-bold" t-esc="mentor_student_count"/>
+                                            <small class="text-muted">Students</small>
+                                        </div>
+                                    </div>
+                                    <a href="/my/olympiad/mentor" class="btn btn-primary mt-3 w-100">Go to Mentor Dashboard</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Jury Card -->
+                        <div class="col-md-6" t-if="is_jury">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fa fa-gavel me-2"></i>Jury Dashboard
+                                    </h5>
+                                    <p class="card-text text-muted">Review and score assigned projects.</p>
+                                    <div class="d-flex justify-content-between mt-3">
+                                        <div class="text-center">
+                                            <div class="display-6 fw-bold" t-esc="jury_assignment_count"/>
+                                            <small class="text-muted">Assignments</small>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="display-6 fw-bold" t-esc="jury_scored_count"/>
+                                            <small class="text-muted">Scored</small>
+                                        </div>
+                                    </div>
+                                    <a href="/my/olympiad/jury" class="btn btn-secondary mt-3 w-100">Go to Jury Dashboard</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Role Warning -->
+                        <div class="col-12" t-if="not is_mentor and not is_jury">
+                            <div class="alert alert-info">
+                                <strong>Welcome!</strong> You are currently not assigned as a mentor or jury member. Please contact the administrator if you believe this is an error.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </t>
         </template>
 
-        <!-- Jury Dashboard -->
+        <!-- ============================================================ -->
+        <!-- Mentor Dashboard — Project list                               -->
+        <!-- ============================================================ -->
+        <template id="mentor_dashboard" name="Mentor Dashboard">
+            <t t-call="portal.portal_layout">
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Mentor Dashboard</h1>
+                        <a href="/my/olympiad" class="btn btn-outline-secondary">Back to Portal</a>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <div class="display-5 fw-bold" t-esc="project_count"/>
+                                    <small class="text-muted">Total Projects</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <div class="display-5 fw-bold" t-esc="student_count"/>
+                                    <small class="text-muted">Total Students</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="mb-3">My Projects</h3>
+                    <div t-if="not projects" class="alert alert-info">
+                        You have no projects yet.
+                    </div>
+                    <div t-if="projects" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Event</th>
+                                    <th>Category</th>
+                                    <th>Students</th>
+                                    <th>State</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="projects" t-as="project">
+                                    <td t-esc="project.code"/>
+                                    <td t-esc="project.name"/>
+                                    <td t-esc="project.event_id.name"/>
+                                    <td t-esc="project.category_id.name"/>
+                                    <td t-esc="project.num_students"/>
+                                    <td>
+                                        <span t-if="project.state == 'draft'" class="badge bg-secondary">Draft</span>
+                                        <span t-if="project.state == 'published'" class="badge bg-success">Published</span>
+                                        <span t-if="project.state == 'finished'" class="badge bg-primary">Finished</span>
+                                        <span t-if="project.state == 'cancelled'" class="badge bg-danger">Cancelled</span>
+                                    </td>
+                                    <td>
+                                        <a t-att-href="'/my/olympiad/project/' + str(project.id)" class="btn btn-sm btn-outline-primary">View</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Mentor: Project Detail -->
+        <template id="mentor_project_detail" name="Mentor Project Detail">
+            <t t-call="portal.portal_layout">
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 t-esc="project.name"/>
+                        <a href="/my/olympiad/mentor" class="btn btn-outline-secondary">Back to Projects</a>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Project Info</div>
+                                <div class="card-body">
+                                    <p><strong>Code:</strong> <span t-esc="project.code"/></p>
+                                    <p><strong>Event:</strong> <span t-esc="project.event_id.name"/></p>
+                                    <p><strong>Category:</strong> <span t-esc="project.category_id.name"/></p>
+                                    <p><strong>Presentation:</strong> <span t-esc="project.pres_lang"/></p>
+                                    <p><strong>State:</strong> <span t-esc="project.state"/></p>
+                                    <p><strong>Score:</strong> <span t-esc="project.project_score"/></p>
+                                    <p><strong>Medal:</strong> <span t-esc="project.medal"/></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Students</div>
+                                <div class="card-body">
+                                    <div t-if="not students" class="text-muted">No students assigned.</div>
+                                    <ul t-if="students" class="list-group list-group-flush">
+                                        <li t-foreach="students" t-as="stu" class="list-group-item">
+                                            <span t-esc="stu.student_id.name"/>
+                                            <span t-if="stu.role == 'leader'" class="badge bg-info ms-2">Leader</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- ============================================================ -->
+        <!-- Jury Dashboard — Assignment list                              -->
+        <!-- ============================================================ -->
         <template id="jury_dashboard" name="Jury Dashboard">
             <t t-call="portal.portal_layout">
-                <div class="container">
-                    <h1>Welcome, Juror</h1>
-                    <p>You can see your assignments here.</p>
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Jury Dashboard</h1>
+                        <a href="/my/olympiad" class="btn btn-outline-secondary">Back to Portal</a>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <div class="display-5 fw-bold" t-esc="assignment_count"/>
+                                    <small class="text-muted">Total Assignments</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <div class="display-5 fw-bold" t-esc="scored_count"/>
+                                    <small class="text-muted">Scored</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="mb-3">My Assignments</h3>
+                    <div t-if="not assignments" class="alert alert-info">
+                        You have no assignments yet.
+                    </div>
+                    <div t-if="assignments" class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Event</th>
+                                    <th>Category</th>
+                                    <th>Assigned Date</th>
+                                    <th>Score</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="assignments" t-as="assignment">
+                                    <td t-esc="assignment.project_id.name"/>
+                                    <td t-esc="assignment.project_id.event_id.name"/>
+                                    <td t-esc="assignment.project_id.category_id.name"/>
+                                    <td t-esc="assignment.assigned_date"/>
+                                    <td>
+                                        <span t-if="assignment.score > 0" t-esc="assignment.score"/>
+                                        <span t-else="1" class="badge bg-warning">Pending</span>
+                                    </td>
+                                    <td>
+                                        <a t-att-href="'/my/olympiad/assignment/' + str(assignment.id)" class="btn btn-sm btn-outline-primary">Score</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </template>
+
+        <!-- Jury: Assignment Detail + Score Form -->
+        <template id="jury_assignment_detail" name="Jury Assignment Detail">
+            <t t-call="portal.portal_layout">
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 t-esc="project.name"/>
+                        <a href="/my/olympiad/jury" class="btn btn-outline-secondary">Back to Assignments</a>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Project Information</div>
+                                <div class="card-body">
+                                    <p><strong>Code:</strong> <span t-esc="project.code"/></p>
+                                    <p><strong>Event:</strong> <span t-esc="project.event_id.name"/></p>
+                                    <p><strong>Category:</strong> <span t-esc="project.category_id.name"/></p>
+                                    <p><strong>Mentor:</strong> <span t-esc="project.mentor_id.name"/></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">Your Score</div>
+                                <div class="card-body">
+                                    <form t-att-action="'/my/olympiad/assignment/' + str(assignment.id) + '/score'" method="post">
+                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                        <div class="mb-3">
+                                            <label class="form-label">Score (0-100)</label>
+                                            <input type="number" name="score" class="form-control" min="0" max="100" step="0.1" t-att-value="assignment.score if assignment.score > 0 else ''" required="required"/>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Comments</label>
+                                            <textarea name="comments" class="form-control" rows="3"><t t-esc="assignment.comments or ''"/></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Submit Score</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </t>
         </template>

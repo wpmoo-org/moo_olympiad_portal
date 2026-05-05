@@ -1,0 +1,1 @@
+# models/__init__.py will be imported by moo_olympiad_portal/__init__.py
