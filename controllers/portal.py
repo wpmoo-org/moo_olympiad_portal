@@ -14,7 +14,7 @@ class OlympiadPortal(http.Controller):
 
     def _check_mentor(self, partner):
         """Return True if partner is an approved mentor."""
-        return partner and partner.is_olympiad_mentor
+        return partner and partner.is_olympiad_mentor and partner.mentor_state == 'approved'
 
     def _check_jury(self, partner):
         """Return True if partner is an approved jury."""
@@ -132,7 +132,7 @@ class OlympiadPortal(http.Controller):
         return request.render('moo_olympiad_portal.jury_assignment_detail', values)
 
     # ── Jury: Score Submission ────────────────────────────────────────────
-    @http.route('/my/olympiad/assignment/<int:assignment_id>/score', auth='user', website=True, methods=['POST'])
+    @http.route('/my/olympiad/assignment/<<intint:assignment_id>/score', auth='user', website=True, methods=['POST'])
     def my_olympiad_assignment_score(self, assignment_id, **post):
         partner = self._get_olympiad_partner()
         if not partner or not self._check_jury(partner):
@@ -142,27 +142,8 @@ class OlympiadPortal(http.Controller):
         if not assignment.exists() or assignment.jury_id.id != partner.id:
             return request.redirect('/my/olympiad/jury')
 
-        score = post.get('score')
-        comments = post.get('comments', '')
-        if score is not None:
-            try:
-                score_val = float(score)
-                assignment.write({
-                    'score': score_val,
-                    'comments': comments,
-                })
-            except ValueError:
-                pass
-
-    # ── Jury: Score Submission ────────────────────────────────────────────
-    @http.route('/my/olympiad/assignment/<int:assignment_id>/score', auth='user', website=True, methods=['POST'])
-    def my_olympiad_assignment_score(self, assignment_id, **post):
-        partner = self._get_olympiad_partner()
-        if not partner or not self._check_jury(partner):
-            return request.redirect('/my/olympiad')
-
-        assignment = request.env['moo_olympiad.jury.assignment'].sudo().browse(assignment_id)
-        if not assignment.exists() or assignment.jury_id.id != partner.id:
+        # Validation: Event state must be open or finished to score
+        if assignment.event_id.state not in ['open', 'finished']:
             return request.redirect('/my/olympiad/jury')
 
         score = post.get('score')
@@ -170,14 +151,17 @@ class OlympiadPortal(http.Controller):
         if score is not None:
             try:
                 score_val = float(score)
-                assignment.write({
-                    'score': score_val,
-                    'comments': comments,
-                })
+                if 0 <= score_val <= 100:
+                    assignment.write({
+                        'score': score_val,
+                        'comments': comments,
+                    })
             except ValueError:
                 pass
 
         return request.redirect(f'/my/olympiad/assignment/{assignment_id}')
+
+    # ── Public: Events ──────────────────────────────────────────────────────
 
     # ── Public: Events ──────────────────────────────────────────────────────
     @http.route('/olympiad/events', auth='public', website=True)
@@ -253,7 +237,7 @@ class OlympiadPortal(http.Controller):
             return request.redirect('/web/login')
         if self._check_mentor(partner):
             return request.redirect('/my/olympiad/mentor')
-        partner.sudo().write({'is_olympiad_mentor': True})
+        partner.sudo().write({'is_olympiad_mentor': True, 'mentor_state': 'pending'})
         return request.redirect('/my/olympiad')
 
     @http.route('/olympiad/apply/jury/submit', auth='user', website=True, methods=['POST'])
@@ -292,6 +276,13 @@ class OlympiadPortal(http.Controller):
         category_id = int(post.get('category_id', 0))
 
         if not all([event_id, name, category_id]):
+            return request.redirect('/olympiad/register/project')
+
+        event = request.env['moo_olympiad.event'].sudo().browse(event_id)
+        if not event.exists() or event.state != 'open':
+            return request.redirect('/olympiad/register/project')
+
+        if category_id not in event.category_ids.ids:
             return request.redirect('/olympiad/register/project')
 
         project = request.env['moo_olympiad.project'].sudo().create({
