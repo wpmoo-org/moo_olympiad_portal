@@ -132,7 +132,7 @@ class OlympiadPortal(http.Controller):
         return request.render('moo_olympiad_portal.jury_assignment_detail', values)
 
     # ── Jury: Score Submission ────────────────────────────────────────────
-    @http.route('/my/olympiad/assignment/<<intint:assignment_id>/score', auth='user', website=True, methods=['POST'])
+    @http.route('/my/olympiad/assignment/<int:assignment_id>/score', auth='user', website=True, methods=['POST'])
     def my_olympiad_assignment_score(self, assignment_id, **post):
         partner = self._get_olympiad_partner()
         if not partner or not self._check_jury(partner):
