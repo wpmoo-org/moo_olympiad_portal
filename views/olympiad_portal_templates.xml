@@ -271,8 +271,13 @@
                         </div>
                         <div class="col-md-6">
                             <div class="card">
-                                <div class="card-header">Your Score</div>
-                                <div class="card-body">
+                <div class="card-header">Your Score</div>
+                <div class="card-body">
+                    <div t-if="score_error" class="alert alert-danger">
+                        <strong>Invalid score.</strong>
+                        <span t-if="error_msg" t-esc="error_msg"/>
+                        <span t-else="">Please enter a number between 0 and 100.</span>
+                    </div>
                                     <form t-att-action="'/my/olympiad/assignment/' + str(assignment.id) + '/score'" method="post">
                                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                         <div class="mb-3">
@@ -515,62 +520,486 @@
             </t>
         </template>
 
-        <!-- ============================================================ -->
-        <!-- Project Registration                                           -->
-        <!-- ============================================================ -->
+ <!-- ============================================================ -->
+ <!-- Project Registration Wizard -->
+ <!-- ============================================================ -->
 
-        <template id="register_project" name="Register Project">
-            <t t-call="website.layout">
-                <div class="container mt-4">
-                    <div class="row">
-                        <div class="col-md-8 offset-md-2">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h3 class="mb-0">Register New Project</h3>
-                                </div>
-                                <div class="card-body">
-                                    <form action="/olympiad/register/project/submit" method="post">
-                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                        <div class="mb-3">
-                                            <label class="form-label">Project Name</label>
-                                            <input type="text" name="name" class="form-control" required="required" placeholder="Enter project name..."/>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Select Event</label>
-                                            <select name="event_id" class="form-select" required="required">
-                                                <option value="">-- Select an event --</option>
-                                                <t t-foreach="events" t-as="event">
-                                                    <option t-att-value="event.id" t-esc="event.name"/>
-                                                </t>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Select Category</label>
-                                            <select name="category_id" class="form-select" required="required">
-                                                <option value="">-- Select a category --</option>
-                                                <t t-foreach="events" t-as="event">
-                                                    <optgroup t-att-label="event.name">
-                                                        <option t-foreach="event.category_ids" t-as="cat" t-att-value="cat.id" t-esc="cat.name"/>
-                                                    </optgroup>
-                                                </t>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Presentation Language</label>
-                                            <select name="pres_lang" class="form-select">
-                                                <option value="en">English</option>
-                                                <option value="de">German</option>
-                                            </select>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">Register Project</button>
-                                        <a href="/my/olympiad/mentor" class="btn btn-outline-secondary ms-2">Cancel</a>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </t>
-        </template>
+ <!-- Step 1: Project Details -->
+ <template id="register_project" name="Register Project - Step 1">
+ <t t-call="website.layout">
+ <style>
+ .nav-pills .nav-link.completed { background-color: #198754; color: #fff; }
+ .nav-pills .nav-link.active { background-color: #0d6efd; color: #fff; }
+ .nav-pills .nav-link.disabled { color: #6c757d; }
+ </style>
+ <div class="container mt-4">
+ <div class="row">
+ <div class="col-md-8 offset-md-2">
+ <div class="card">
+ <div class="card-header bg-primary text-white">
+ <h3 class="mb-0">Step 1/5: Project Details</h3>
+ </div>
+ <div class="card-body">
+ <ul class="nav nav-pills mb-4">
+ <li class="nav-item"><span class="nav-link active">1. Project</span></li>
+ <li class="nav-item"><span class="nav-link disabled">2. Students</span></li>
+ <li class="nav-item"><span class="nav-link disabled">3. Accommodation</span></li>
+ <li class="nav-item"><span class="nav-link disabled">4. Excursion</span></li>
+ <li class="nav-item"><span class="nav-link disabled">5. Summary</span></li>
+ </ul>
+ <form action="/olympiad/register/project/submit" method="post">
+ <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+ <div class="mb-3">
+ <label class="form-label">Project Name</label>
+ <input type="text" name="name" class="form-control" required="required" placeholder="Enter project name..."/>
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Select Event</label>
+ <select name="event_id" class="form-select" required="required" id="event_select">
+ <option value="">-- Select an event --</option>
+ <t t-foreach="events" t-as="event">
+ <option t-att-value="event.id" t-esc="event.name"/>
+ </t>
+ </select>
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Select Category</label>
+ <select name="category_id" class="form-select" required="required" id="category_select">
+ <option value="">-- Select a category --</option>
+ <t t-foreach="events" t-as="event">
+ <optgroup t-att-label="event.name" t-att-data-event="event.id">
+ <option t-foreach="event.category_ids" t-as="cat" t-att-value="cat.id" t-esc="cat.name"/>
+ </optgroup>
+ </t>
+ </select>
+ </div>
+ <div class="mb-3">
+ <label class="form-label">Presentation Language</label>
+ <select name="pres_lang" class="form-select">
+ <option value="en">English</option>
+ <option value="de">German</option>
+ </select>
+ </div>
+ <div class="d-flex justify-content-between">
+ <a href="/my/olympiad/mentor" class="btn btn-outline-secondary">Cancel</a>
+ <button type="submit" class="btn btn-primary">Next: Add Students</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </t>
+ </template>
+
+ <!-- Step 2: Add Students -->
+ <template id="register_students" name="Register Project - Step 2">
+ <t t-call="website.layout">
+ <div class="container mt-4">
+ <div class="row">
+ <div class="col-md-10 offset-md-1">
+ <div class="card">
+ <div class="card-header bg-primary text-white">
+ <h3 class="mb-0">Step 2/5: Add Students</h3>
+ </div>
+ <div class="card-body">
+ <ul class="nav nav-pills mb-4">
+ <li class="nav-item"><span class="nav-link completed">1. Project</span></li>
+ <li class="nav-item"><span class="nav-link active">2. Students</span></li>
+ <li class="nav-item"><span class="nav-link disabled">3. Accommodation</span></li>
+ <li class="nav-item"><span class="nav-link disabled">4. Excursion</span></li>
+ <li class="nav-item"><span class="nav-link disabled">5. Summary</span></li>
+ </ul>
+
+ <div t-if="student_error" class="alert alert-danger">
+ At least one student is required to continue.
+ </div>
+
+ <p class="text-muted mb-3">
+ Project: <strong t-esc="project.name"/> |
+ Category: <strong t-esc="project.category_id.name"/> |
+ Max participants: <strong t-esc="project.category_id.max_participants"/>
+ </p>
+
+ <form t-att-action="'/olympiad/register/' + str(project.id) + '/students/submit'" method="post">
+ <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+ <input type="hidden" name="student_count" id="student_count" value="0"/>
+
+ <div id="students_container"></div>
+
+ <button type="button" class="btn btn-outline-primary mb-3" id="add_student_btn">
+ <i class="fa fa-plus me-1"></i>Add Student
+ </button>
+
+ <div class="d-flex justify-content-between">
+ <a t-att-href="'/olympiad/register/project'" class="btn btn-outline-secondary">Back</a>
+ <button type="submit" class="btn btn-primary">Next: Accommodation</button>
+ </div>
+ </form>
+
+ <template id="student_form_template">
+ <div class="card mb-3 border-primary student-card">
+ <div class="card-header d-flex justify-content-between align-items-center">
+ <span class="student-label">Student 1</span>
+ <button type="button" class="btn btn-sm btn-outline-danger remove-student-btn" title="Remove">X</button>
+ </div>
+ <div class="card-body">
+ <div class="row g-3">
+ <div class="col-md-4">
+ <label class="form-label">First Name *</label>
+ <input type="text" class="form-control student-first-name" required="required"/>
+ </div>
+ <div class="col-md-4">
+ <label class="form-label">Last Name *</label>
+ <input type="text" class="form-control student-last-name" required="required"/>
+ </div>
+ <div class="col-md-4">
+ <label class="form-label">Birth Date *</label>
+ <input type="date" class="form-control student-birth-date" required="required"/>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Gender *</label>
+ <select class="form-select student-gender" required="required">
+ <option value="">--</option>
+ <option value="M">Male</option>
+ <option value="F">Female</option>
+ <option value="D">Diverse</option>
+ </select>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Country *</label>
+ <select class="form-select student-country" required="required">
+ <option value="">--</option>
+ <t t-foreach="countries" t-as="country">
+ <option t-att-value="country.id" t-esc="country.name"/>
+ </t>
+ </select>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">T-Shirt Size *</label>
+ <select class="form-select student-tshirt" required="required">
+ <option value="">--</option>
+ <option value="XS">Extra Small</option>
+ <option value="S">Small</option>
+ <option value="M">Medium</option>
+ <option value="L">Large</option>
+ <option value="XL">Extra Large</option>
+ <option value="XXL">Double Extra Large</option>
+ </select>
+ </div>
+ <div class="col-md-3">
+ <label class="form-label">Email</label>
+ <input type="email" class="form-control student-email"/>
+ </div>
+ </div>
+ </div>
+ </div>
+ </template>
+
+ <script type="text/javascript">
+ document.addEventListener('DOMContentLoaded', function() {
+ var container = document.getElementById('students_container');
+ var countInput = document.getElementById('student_count');
+ var addBtn = document.getElementById('add_student_btn');
+ var maxStudents = <t t-esc="project.category_id.max_participants"/>;
+
+ function updateLabels() {
+ var cards = container.querySelectorAll('.student-card');
+ countInput.value = cards.length;
+ cards.forEach(function(card, idx) {
+ card.querySelector('.student-label').textContent = 'Student ' + (idx + 1) + (idx === 0 ? ' (Leader)' : '');
+ var inputs = card.querySelectorAll('input, select');
+ inputs.forEach(function(inp) {
+ var nameAttr = inp.className;
+ if (nameAttr.includes('student-first-name')) inp.name = 'student_' + idx + '_first_name';
+ else if (nameAttr.includes('student-last-name')) inp.name = 'student_' + idx + '_last_name';
+ else if (nameAttr.includes('student-birth-date')) inp.name = 'student_' + idx + '_birth_date';
+ else if (nameAttr.includes('student-gender')) inp.name = 'student_' + idx + '_gender';
+ else if (nameAttr.includes('student-country')) inp.name = 'student_' + idx + '_country_id';
+ else if (nameAttr.includes('student-tshirt')) inp.name = 'student_' + idx + '_tshirt_size';
+ else if (nameAttr.includes('student-email')) inp.name = 'student_' + idx + '_email';
+ else if (nameAttr.includes('student-phone')) inp.name = 'student_' + idx + '_phone';
+ });
+ });
+ }
+
+ function addStudentCard() {
+ var cards = container.querySelectorAll('.student-card');
+ if (cards.length >= maxStudents) return;
+ var template = document.getElementById('student_form_template');
+ var clone = template.content.cloneNode(true);
+ container.appendChild(clone);
+ updateLabels();
+ }
+
+ container.addEventListener('click', function(e) {
+ if (e.target.classList.contains('remove-student-btn')) {
+ e.target.closest('.student-card').remove();
+ updateLabels();
+ }
+ });
+
+ addBtn.addEventListener('click', addStudentCard);
+ addStudentCard();
+ });
+ </script>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </t>
+ </template>
+
+ <!-- Step 3: Accommodation -->
+ <template id="register_accommodation" name="Register Project - Step 3">
+ <t t-call="website.layout">
+ <div class="container mt-4">
+ <div class="row">
+ <div class="col-md-8 offset-md-2">
+ <div class="card">
+ <div class="card-header bg-primary text-white">
+ <h3 class="mb-0">Step 3/5: Accommodation</h3>
+ </div>
+ <div class="card-body">
+ <ul class="nav nav-pills mb-4">
+ <li class="nav-item"><span class="nav-link completed">1. Project</span></li>
+ <li class="nav-item"><span class="nav-link completed">2. Students</span></li>
+ <li class="nav-item"><span class="nav-link active">3. Accommodation</span></li>
+ <li class="nav-item"><span class="nav-link disabled">4. Excursion</span></li>
+ <li class="nav-item"><span class="nav-link disabled">5. Summary</span></li>
+ </ul>
+
+ <p class="text-muted mb-3">
+ Accommodation fee: <strong t-esc="project.event_id.currency_id.symbol"/> <t t-esc="project.event_id.accommodation_fee"/> per night
+ </p>
+
+ <form t-att-action="'/olympiad/register/' + str(project.id) + '/accommodation/submit'" method="post">
+ <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+ <div t-if="not accommodations" class="alert alert-info">
+ No accommodation dates configured for this event. You can skip this step.
+ </div>
+
+ <div t-foreach="project.student_ids" t-as="line" class="card mb-3">
+ <div class="card-header">
+ <strong t-esc="line.student_id.name"/>
+ <span t-if="line.role == 'leader'" class="badge bg-info ms-2">Leader</span>
+ </div>
+ <div class="card-body">
+ <div class="form-check mb-3">
+ <input type="checkbox" class="form-check-input"
+ t-att-id="'no_accommodation_' + str(line.id)"
+ t-att-name="'no_accommodation_' + str(line.id)"
+ t-att-checked="line.no_accommodation"/>
+ <label class="form-check-label" t-att-for="'no_accommodation_' + str(line.id)">No accommodation needed</label>
+ </div>
+ <div t-if="accommodations" class="accommodation-dates">
+ <t t-foreach="accommodations" t-as="acc">
+ <div class="form-check">
+ <input type="checkbox" class="form-check-input acc-checkbox"
+ t-att-id="f'acc_{line.id}_{acc.id}'"
+ t-att-data-line="str(line.id)"
+ t-att-data-acc="str(acc.id)"
+ t-att-checked="acc in line.accommodation_ids"/>
+ <label class="form-check-label" t-att-for="f'acc_{line.id}_{acc.id}'">
+ <span t-esc="acc.date"/> — <span t-esc="acc.label or 'No label'"/>
+ </label>
+ </div>
+ </t>
+ <input type="hidden" t-att-name="'accommodation_' + str(line.id)" class="acc-hidden" t-att-data-line="str(line.id)"/>
+ </div>
+ </div>
+ </div>
+
+ <div class="d-flex justify-content-between">
+ <a t-att-href="'/olympiad/register/' + str(project.id) + '/students'" class="btn btn-outline-secondary">Back</a>
+ <button type="submit" class="btn btn-primary">Next: Excursion</button>
+ </div>
+ </form>
+
+ <script type="text/javascript">
+ document.addEventListener('DOMContentLoaded', function() {
+ document.querySelectorAll('.form-check-input[id^="no_accommodation_"]').forEach(function(cb) {
+ cb.addEventListener('change', function() {
+ var lineId = this.id.replace('no_accommodation_', '');
+ var datesDiv = this.closest('.card-body').querySelector('.accommodation-dates');
+ if (datesDiv) datesDiv.style.display = this.checked ? 'none' : 'block';
+ if (this.checked) {
+ document.querySelectorAll('.acc-checkbox[data-line="' + lineId + '"]').forEach(function(acc) {
+ acc.checked = false;
+ });
+ }
+ });
+ document.dispatchEvent(new Event('updateAccHidden'));
+ });
+
+ document.addEventListener('change', function(e) {
+ if (e.target.classList.contains('acc-checkbox')) {
+ document.dispatchEvent(new Event('updateAccHidden'));
+ }
+ });
+
+ document.addEventListener('updateAccHidden', function() {
+ var lineIds = [];
+ document.querySelectorAll('.acc-checkbox').forEach(function(cb) {
+ if (cb.dataset.line &amp;&amp; lineIds.indexOf(cb.dataset.line) === -1) lineIds.push(cb.dataset.line);
+ });
+ lineIds.forEach(function(lineId) {
+ var hidden = document.querySelector('.acc-hidden[data-line="' + lineId + '"]');
+ if (!hidden) return;
+ var selected = [];
+ document.querySelectorAll('.acc-checkbox[data-line="' + lineId + '"]:checked').forEach(function(cb) {
+ selected.push(cb.dataset.acc);
+ });
+ hidden.value = selected.join(',');
+ });
+ });
+ });
+ </script>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </t>
+ </template>
+
+ <!-- Step 4: Excursion -->
+ <template id="register_excursion" name="Register Project - Step 4">
+ <t t-call="website.layout">
+ <div class="container mt-4">
+ <div class="row">
+ <div class="col-md-8 offset-md-2">
+ <div class="card">
+ <div class="card-header bg-primary text-white">
+ <h3 class="mb-0">Step 4/5: Excursion</h3>
+ </div>
+ <div class="card-body">
+ <ul class="nav nav-pills mb-4">
+ <li class="nav-item"><span class="nav-link completed">1. Project</span></li>
+ <li class="nav-item"><span class="nav-link completed">2. Students</span></li>
+ <li class="nav-item"><span class="nav-link completed">3. Accommodation</span></li>
+ <li class="nav-item"><span class="nav-link active">4. Excursion</span></li>
+ <li class="nav-item"><span class="nav-link disabled">5. Summary</span></li>
+ </ul>
+
+ <p class="text-muted mb-3">
+ Excursion fee: <strong t-esc="project.event_id.currency_id.symbol"/> <t t-esc="project.event_id.excursion_fee"/> per person
+ </p>
+
+ <form t-att-action="'/olympiad/register/' + str(project.id) + '/excursion/submit'" method="post">
+ <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+ <div class="card mb-3">
+ <div class="card-header">Mentor (You)</div>
+ <div class="card-body">
+ <div class="form-check">
+ <input type="checkbox" class="form-check-input" name="mentor_excursion" id="mentor_excursion" t-att-checked="project.mentor_excursion"/>
+ <label class="form-check-label" for="mentor_excursion">I want to join the excursion</label>
+ </div>
+ </div>
+ </div>
+
+ <div t-foreach="project.student_ids" t-as="line" class="card mb-3">
+ <div class="card-header d-flex justify-content-between">
+ <span><strong t-esc="line.student_id.name"/></span>
+ <span t-if="line.role == 'leader'" class="badge bg-info">Leader</span>
+ </div>
+ <div class="card-body">
+ <div class="form-check">
+ <input type="checkbox" class="form-check-input"
+ t-att-id="'excursion_' + str(line.id)"
+ t-att-name="'excursion_' + str(line.id)"
+ t-att-checked="line.excursion"/>
+ <label class="form-check-label" t-att-for="'excursion_' + str(line.id)">Excursion</label>
+ </div>
+ </div>
+ </div>
+
+ <div class="d-flex justify-content-between">
+ <a t-att-href="'/olympiad/register/' + str(project.id) + '/accommodation'" class="btn btn-outline-secondary">Back</a>
+ <button type="submit" class="btn btn-primary">Next: Summary</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </t>
+ </template>
+
+ <!-- Step 5: Summary / Payment -->
+ <template id="register_summary" name="Register Project - Step 5">
+ <t t-call="website.layout">
+ <div class="container mt-4">
+ <div class="row">
+ <div class="col-md-8 offset-md-2">
+ <div class="card">
+ <div class="card-header bg-primary text-white">
+ <h3 class="mb-0">Step 5/5: Summary &amp; Payment</h3>
+ </div>
+ <div class="card-body">
+ <ul class="nav nav-pills mb-4">
+ <li class="nav-item"><span class="nav-link completed">1. Project</span></li>
+ <li class="nav-item"><span class="nav-link completed">2. Students</span></li>
+ <li class="nav-item"><span class="nav-link completed">3. Accommodation</span></li>
+ <li class="nav-item"><span class="nav-link completed">4. Excursion</span></li>
+ <li class="nav-item"><span class="nav-link active">5. Summary</span></li>
+ </ul>
+
+ <h5>Project Details</h5>
+ <table class="table table-bordered mb-4">
+ <tr><th>Project Name</th><td t-esc="project.name"/></tr>
+ <tr><th>Event</th><td t-esc="project.event_id.name"/></tr>
+ <tr><th>Category</th><td t-esc="project.category_id.name"/></tr>
+ <tr><th>Presentation Language</th><td t-esc="project.pres_lang"/></tr>
+ </table>
+
+ <h5>Students (<t t-esc="project.num_students"/>)</h5>
+ <table class="table table-bordered mb-4">
+ <thead><tr><th>Name</th><th>Role</th><th>Accommodation Nights</th><th>Excursion</th></tr></thead>
+ <tbody>
+ <tr t-foreach="project.student_ids" t-as="line">
+ <td t-esc="line.student_id.name"/>
+ <td><span t-if="line.role == 'leader'" class="badge bg-info">Leader</span><span t-else="" class="badge bg-secondary">Member</span></td>
+ <td t-esc="line.accommodation_nights"/>
+ <td><span t-if="line.excursion">Yes</span><span t-else="">No</span></td>
+ </tr>
+ </tbody>
+ </table>
+
+ <h5>Cost Breakdown</h5>
+ <table class="table table-bordered mb-4">
+ <thead><tr><th>Item</th><th class="text-end">Amount</th></tr></thead>
+ <tbody>
+ <tr><td>Registration (<t t-esc="project.num_students"/> x <t t-esc="project.event_id.currency_id.symbol"/><t t-esc="project.event_id.registration_fee"/>)</td><td class="text-end"><t t-esc="project.event_id.currency_id.symbol"/> <t t-esc="registration_total"/></td></tr>
+ <tr t-if="accommodation_total > 0"><td>Accommodation</td><td class="text-end"><t t-esc="project.event_id.currency_id.symbol"/> <t t-esc="accommodation_total"/></td></tr>
+ <tr t-if="student_excursion_total > 0"><td>Student Excursions</td><td class="text-end"><t t-esc="project.event_id.currency_id.symbol"/> <t t-esc="student_excursion_total"/></td></tr>
+ <tr t-if="mentor_excursion_total > 0"><td>Mentor Excursion</td><td class="text-end"><t t-esc="project.event_id.currency_id.symbol"/> <t t-esc="mentor_excursion_total"/></td></tr>
+ <tr class="table-active fw-bold"><td>Grand Total</td><td class="text-end"><t t-esc="project.event_id.currency_id.symbol"/> <t t-esc="grand_total"/></td></tr>
+ </tbody>
+ </table>
+
+ <div class="alert alert-info mb-4">
+ <i class="fa fa-info-circle me-2"></i>Payment integration will be available soon. For now, your project will be submitted for review.
+ </div>
+
+ <form t-att-action="'/olympiad/register/' + str(project.id) + '/confirm'" method="post">
+ <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+ <div class="d-flex justify-content-between">
+ <a t-att-href="'/olympiad/register/' + str(project.id) + '/excursion'" class="btn btn-outline-secondary">Back</a>
+ <button type="submit" class="btn btn-success btn-lg">Confirm &amp; Submit Project</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+ </div>
+ </div>
+ </t>
+ </template>
     </data>
 </odoo>

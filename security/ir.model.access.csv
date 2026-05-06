@@ -1,8 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_moo_olympiad_category_portal,Moo Olympiad Category Portal,model_moo_olympiad_category,base.group_portal,1,0,0,0
 access_moo_olympiad_event_portal,Moo Olympiad Event Portal,model_moo_olympiad_event,base.group_portal,1,0,0,0
-access_moo_olympiad_student_portal,Moo Olympiad Student Portal,model_moo_olympiad_student,base.group_portal,1,0,0,0
-access_moo_olympiad_project_portal,Moo Olympiad Project Portal,model_moo_olympiad_project,base.group_portal,1,0,0,0
-access_moo_olympiad_project_student_portal,Moo Olympiad Project Student Portal,model_moo_olympiad_project_student,base.group_portal,1,0,0,0
+access_moo_olympiad_student_portal,Moo Olympiad Student Portal,model_moo_olympiad_student,base.group_portal,1,0,1,0
+access_moo_olympiad_project_portal,Moo Olympiad Project Portal,model_moo_olympiad_project,base.group_portal,1,1,1,0
+access_moo_olympiad_project_student_portal,Moo Olympiad Project Student Portal,model_moo_olympiad_project_student,base.group_portal,1,1,1,0
 access_moo_olympiad_jury_assignment_portal,Moo Olympiad Jury Assignment Portal,model_moo_olympiad_jury_assignment,base.group_portal,1,0,0,0
 access_moo_olympiad_event_accommodation_portal,Moo Olympiad Event Accommodation Portal,model_moo_olympiad_event_accommodation,base.group_portal,1,0,0,0
