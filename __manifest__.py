@@ -13,6 +13,8 @@ Provide external access for mentors and jury members.
     'license': 'LGPL-3',
     'depends': ['moo_olympiad', 'portal', 'website', 'auth_signup'],
     'data': [
+        'security/olympiad_portal_security.xml',
+        'security/ir.model.access.csv',
         'views/olympiad_portal_templates.xml',
     ],
     'application': False,
