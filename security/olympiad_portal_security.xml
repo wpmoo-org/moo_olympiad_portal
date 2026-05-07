@@ -42,5 +42,29 @@
         <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
     </record>
 
+    <!-- C1: Portal users can only write their own projects (mentor_id = self) -->
+    <record id="rule_moo_olympiad_project_portal_write" model="ir.rule">
+        <field name="name">Project: Portal writes own only</field>
+        <field name="model_id" ref="moo_olympiad.model_moo_olympiad_project"/>
+        <field name="domain_force">[('mentor_id', '=', user.partner_id.id)]</field>
+        <field name="perm_read" eval="0"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+
+    <!-- C2: Portal users can only write student lines of their own projects -->
+    <record id="rule_moo_olympiad_project_student_portal_write" model="ir.rule">
+        <field name="name">Project Student: Portal writes own project lines only</field>
+        <field name="model_id" ref="moo_olympiad.model_moo_olympiad_project_student"/>
+        <field name="domain_force">[('project_id.mentor_id', '=', user.partner_id.id)]</field>
+        <field name="perm_read" eval="0"/>
+        <field name="perm_write" eval="1"/>
+        <field name="perm_create" eval="0"/>
+        <field name="perm_unlink" eval="0"/>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+
     </data>
 </odoo>
