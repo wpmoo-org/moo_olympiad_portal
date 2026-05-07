@@ -190,7 +190,7 @@ class OlympiadPortal(http.Controller):
     @http.route('/olympiad/event/<int:event_id>', auth='public', website=True)
     def olympiad_event_detail(self, event_id, **kw):
         event = request.env['moo_olympiad.event'].sudo().browse(event_id)
-        if not event.exists() or event.state == 'cancelled':
+        if not event.exists() or event.state not in ('open', 'finished'):
             return request.redirect('/olympiad/events')
         return request.render('moo_olympiad_portal.public_event_detail', {
             'event': event,
@@ -364,7 +364,7 @@ class OlympiadPortal(http.Controller):
         Student = request.env['moo_olympiad.student'].sudo()
         ProjectStudent = request.env['moo_olympiad.project.student'].sudo()
 
-        student_count = int(post.get('student_count', 0))
+        student_count = min(int(post.get('student_count', 0)), 50)
         for i in range(student_count):
             first_name = post.get(f'student_{i}_first_name', '').strip()
             last_name = post.get(f'student_{i}_last_name', '').strip()
@@ -377,16 +377,24 @@ class OlympiadPortal(http.Controller):
                 continue
 
             try:
-                student = Student.create({
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'birth_date': birth_date,
-                    'gender': gender,
-                    'country_id': country_id,
-                    'tshirt_size': tshirt_size,
-                    'email': post.get(f'student_{i}_email', ''),
-                    'phone': post.get(f'student_{i}_phone', ''),
-                })
+                existing = Student.search([
+                    ('first_name', '=', first_name),
+                    ('last_name', '=', last_name),
+                    ('birth_date', '=', birth_date),
+                ], limit=1)
+                if existing:
+                    student = existing
+                else:
+                    student = Student.create({
+                        'first_name': first_name,
+                        'last_name': last_name,
+                        'birth_date': birth_date,
+                        'gender': gender,
+                        'country_id': country_id,
+                        'tshirt_size': tshirt_size,
+                        'email': post.get(f'student_{i}_email', ''),
+                        'phone': post.get(f'student_{i}_phone', ''),
+                    })
                 ProjectStudent.create({
                     'project_id': project.id,
                     'student_id': student.id,
@@ -446,7 +454,10 @@ class OlympiadPortal(http.Controller):
                 acc_ids = post.get(f'accommodation_{line.id}', '')
                 if acc_ids:
                     ids = [int(x) for x in acc_ids.split(',') if x.strip().isdigit()]
-                    line.write({'accommodation_ids': [(6, 0, ids)]})
+                    valid_ids = project.event_id.accommodation_ids.ids
+                    ids = [i for i in ids if i in valid_ids]
+                    if ids:
+                        line.write({'accommodation_ids': [(6, 0, ids)]})
 
         return request.redirect(f'/olympiad/register/{project.id}/excursion')
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="0">
+    <data noupdate="1">
 
     <!-- Portal users can only see their own projects (mentor) -->
     <record id="rule_moo_olympiad_project_mentor_own" model="ir.rule">
