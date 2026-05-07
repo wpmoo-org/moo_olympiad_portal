@@ -66,5 +66,13 @@
         <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
     </record>
 
+    <!-- Portal users only see accommodations of open/finished events -->
+    <record id="rule_moo_olympiad_event_accommodation_portal_visible" model="ir.rule">
+        <field name="name">Event Accommodation: Portal sees open/finished events only</field>
+        <field name="model_id" ref="moo_olympiad.model_moo_olympiad_event_accommodation"/>
+        <field name="domain_force">[('event_id.state', 'in', ['open', 'finished'])]</field>
+        <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
+    </record>
+
     </data>
 </odoo>

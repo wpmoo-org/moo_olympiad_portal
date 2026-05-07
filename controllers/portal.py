@@ -15,11 +15,11 @@ class OlympiadPortal(http.Controller):
 
     def _check_mentor(self, partner):
         """Return True if partner is an approved mentor."""
-        return partner and partner.is_olympiad_mentor and partner.mentor_state == 'approved'
+        return partner and partner.sudo().is_olympiad_mentor and partner.sudo().mentor_state == 'approved'
 
     def _check_jury(self, partner):
         """Return True if partner is an approved jury."""
-        return partner and partner.is_olympiad_jury and partner.jury_state == 'approved'
+        return partner and partner.sudo().is_olympiad_jury and partner.sudo().jury_state == 'approved'
 
     # ── Portal Home ─────────────────────────────────────────────────────────
     @http.route('/my/olympiad', auth='user', website=True)
@@ -383,7 +383,23 @@ class OlympiadPortal(http.Controller):
                     ('birth_date', '=', birth_date),
                 ], limit=1)
                 if existing:
-                    student = existing
+                    already_in_event = ProjectStudent.search([
+                        ('student_id', '=', existing.id),
+                        ('event_id', '=', project.event_id.id),
+                    ], limit=1)
+                    if already_in_event:
+                        student = Student.create({
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'birth_date': birth_date,
+                            'gender': gender,
+                            'country_id': country_id,
+                            'tshirt_size': tshirt_size,
+                            'email': post.get(f'student_{i}_email', ''),
+                            'phone': post.get(f'student_{i}_phone', ''),
+                        })
+                    else:
+                        student = existing
                 else:
                     student = Student.create({
                         'first_name': first_name,
