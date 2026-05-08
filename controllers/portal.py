@@ -1,6 +1,7 @@
 from odoo import http
 from odoo.http import request
 from odoo.exceptions import ValidationError, UserError
+from odoo.tools import html_escape
 
 
 class OlympiadPortal(http.Controller):
@@ -66,7 +67,8 @@ class OlympiadPortal(http.Controller):
             return request.redirect('/my/olympiad')
 
         projects = request.env['moo_olympiad.project'].sudo().search([
-            ('mentor_id', '=', partner.id)
+            ('mentor_id', '=', partner.id),
+            ('state', '!=', 'cancelled'),
         ])
 
         values = {
@@ -253,7 +255,7 @@ class OlympiadPortal(http.Controller):
         partner.sudo().write({
             'is_olympiad_mentor': True,
             'mentor_state': 'pending',
-            'olympiad_bio': post.get('bio', ''),
+            'olympiad_bio': html_escape(post.get('bio', '') or ''),
         })
         return request.redirect('/my/olympiad')
 
@@ -267,7 +269,7 @@ class OlympiadPortal(http.Controller):
         partner.sudo().write({
             'is_olympiad_jury': True,
             'jury_state': 'pending',
-            'olympiad_expertise': post.get('expertise', ''),
+            'olympiad_expertise': html_escape(post.get('expertise', '') or ''),
         })
         return request.render('moo_olympiad_portal.apply_jury_success', {
             'partner': partner,
@@ -283,7 +285,12 @@ class OlympiadPortal(http.Controller):
             return 0
 
     def _validate_project_ownership(self, partner, project):
-        return project.exists() and project.mentor_id.id == partner.id and project.state == 'draft'
+        return (
+            project.exists()
+            and project.mentor_id.id == partner.id
+            and project.state == 'draft'
+            and project.event_id.state == 'open'
+        )
 
     @http.route('/olympiad/register/project', auth='user', website=True)
     def olympiad_register_project(self, **kw):
@@ -308,9 +315,18 @@ class OlympiadPortal(http.Controller):
         if not partner or not self._check_mentor(partner):
             return request.redirect('/my/olympiad')
 
-        event_id = int(post.get('event_id', 0))
+        try:
+            event_id = int(post.get('event_id', 0))
+        except (ValueError, TypeError):
+            event_id = 0
         name = post.get('name', '').strip()
-        category_id = int(post.get('category_id', 0))
+        try:
+            category_id = int(post.get('category_id', 0))
+        except (ValueError, TypeError):
+            category_id = 0
+        pres_lang = post.get('pres_lang', 'en')
+        if pres_lang not in ('en', 'de'):
+            pres_lang = 'en'
 
         if not all([event_id, name, category_id]):
             return request.redirect('/olympiad/register/project')
@@ -327,7 +343,7 @@ class OlympiadPortal(http.Controller):
             'mentor_id': partner.id,
             'event_id': event_id,
             'category_id': category_id,
-            'pres_lang': post.get('pres_lang', 'en'),
+            'pres_lang': pres_lang,
         })
         return request.redirect(f'/olympiad/register/{project.id}/students')
 
@@ -364,13 +380,23 @@ class OlympiadPortal(http.Controller):
         Student = request.env['moo_olympiad.student'].sudo()
         ProjectStudent = request.env['moo_olympiad.project.student'].sudo()
 
-        student_count = min(int(post.get('student_count', 0)), 50)
+        try:
+            student_count = int(post.get('student_count', 0))
+        except (ValueError, TypeError):
+            student_count = 0
+        max_participants = project.category_id.max_participants or 50
+        student_count = min(student_count, max_participants, 50)
+
+        student_errors = []
         for i in range(student_count):
             first_name = post.get(f'student_{i}_first_name', '').strip()
             last_name = post.get(f'student_{i}_last_name', '').strip()
             birth_date = post.get(f'student_{i}_birth_date', '')
             gender = post.get(f'student_{i}_gender', '')
-            country_id = int(post.get(f'student_{i}_country_id', 0))
+            try:
+                country_id = int(post.get(f'student_{i}_country_id', 0))
+            except (ValueError, TypeError):
+                country_id = 0
             tshirt_size = post.get(f'student_{i}_tshirt_size', '')
 
             if not all([first_name, last_name, birth_date, gender, country_id, tshirt_size]):
@@ -388,18 +414,11 @@ class OlympiadPortal(http.Controller):
                         ('event_id', '=', project.event_id.id),
                     ], limit=1)
                     if already_in_event:
-                        student = Student.create({
-                            'first_name': first_name,
-                            'last_name': last_name,
-                            'birth_date': birth_date,
-                            'gender': gender,
-                            'country_id': country_id,
-                            'tshirt_size': tshirt_size,
-                            'email': post.get(f'student_{i}_email', ''),
-                            'phone': post.get(f'student_{i}_phone', ''),
-                        })
-                    else:
-                        student = existing
+                        student_errors.append(
+                            f'{first_name} {last_name} is already registered in another project for this event.'
+                        )
+                        continue
+                    student = existing
                 else:
                     student = Student.create({
                         'first_name': first_name,
@@ -416,7 +435,8 @@ class OlympiadPortal(http.Controller):
                     'student_id': student.id,
                     'role': 'leader' if i == 0 else 'member',
                 })
-            except (ValidationError, UserError):
+            except (ValidationError, UserError) as e:
+                student_errors.append(f'{first_name} {last_name}: {str(e)}')
                 continue
 
         if not project.student_ids:
@@ -429,6 +449,7 @@ class OlympiadPortal(http.Controller):
                 'step_index': 1,
                 'step_total': len(self.REGISTRATION_STEPS),
                 'student_error': True,
+                'student_errors': student_errors,
             })
 
         return request.redirect(f'/olympiad/register/{project.id}/accommodation')
@@ -556,6 +577,9 @@ class OlympiadPortal(http.Controller):
 
         project = request.env['moo_olympiad.project'].sudo().browse(project_id)
         if not self._validate_project_ownership(partner, project):
+            return request.redirect('/my/olympiad/mentor')
+
+        if project.event_id.state != 'open':
             return request.redirect('/my/olympiad/mentor')
 
         if project.num_students < 1:
